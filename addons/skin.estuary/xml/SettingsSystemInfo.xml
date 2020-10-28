@@ -255,7 +255,7 @@
 				</control>
 				<control type="progress">
 					<description>Memory BAR</description>
-					<width>730</width>
+					<width>1420</width>
 					<height>16</height>
 					<info>system.memory(used)</info>
 				</control>
@@ -271,7 +271,7 @@
 				</control>
 				<control type="progress">
 					<description>CPU BAR</description>
-					<width>730</width>
+					<width>1420</width>
 					<height>16</height>
 					<info>System.CPUUsage</info>
 					<visible>System.SupportsCPUUsage</visible>
