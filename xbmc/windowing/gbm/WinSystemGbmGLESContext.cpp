@@ -176,7 +176,7 @@ void CWinSystemGbmGLESContext::PresentRender(bool rendered, bool videoLayer)
   }
   else
   {
-    KODI::TIME::Sleep(10ms);
+    KODI::TIME::Sleep(40ms);
   }
 }
 
