@@ -177,7 +177,7 @@
             </dependency>
           </dependencies>
           <level>3</level>
-          <default>true</default>
+          <default>false</default>
           <control type="toggle" />
         </setting>
         <setting id="videoplayer.useprimerenderer" type="integer" label="13462" help="13463">
