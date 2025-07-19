@@ -225,7 +225,8 @@ bool CDRMUtils::FindPlanes()
     CLog::Log(LOGDEBUG, "CDRMUtils::{} - using video plane {}", __FUNCTION__,
               m_video_plane->GetPlaneId());
 
-  if (m_gui_plane->SupportsFormat(DRM_FORMAT_XRGB2101010))
+  if (m_gui_plane->SupportsFormat(DRM_FORMAT_XRGB2101010) &&
+      (!m_video_plane || m_gui_plane->SupportsFormat(FourCCWithAlpha(DRM_FORMAT_XRGB2101010))))
   {
     m_gui_plane->SetFormat(DRM_FORMAT_XRGB2101010);
     CLog::Log(LOGDEBUG, "CDRMUtils::{} - using 10bit gui plane {}", __FUNCTION__,
