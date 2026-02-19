@@ -131,11 +131,6 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
   if (ret < 0)
   {
     CLog::LogF(LOGERROR, "atomic commit failed: {}", strerror(errno));
-    m_atomicRequestQueue.pop_back();
-  }
-  else if (m_atomicRequestQueue.size() > 1)
-  {
-    m_atomicRequestQueue.pop_front();
   }
 
   if (m_inFenceFd != -1)
