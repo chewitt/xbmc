@@ -44,6 +44,7 @@ public:
   bool HasContext() override;
 
   bool SetVideoOutput(const VideoPicture* videoPicture) override;
+  bool SetLinearGui() override;
 
 protected:
   CWinSystemGbmEGLContext(EGLenum platform, std::string const& platformExtension)
@@ -60,6 +61,8 @@ protected:
   virtual bool CreateContext() = 0;
 
   EGLint m_renderableType{0};
+  // once the gui has moved to a linear surface it stays there
+  bool m_linearGui{false};
 
   std::unique_ptr<KODI::UTILS::EGL::CEGLFence> m_eglFence;
 
@@ -68,6 +71,10 @@ protected:
     void operator()(CVaapiProxy* p) const;
   };
   std::unique_ptr<CVaapiProxy, delete_CVaapiProxy> m_vaapiProxy;
+
+private:
+  std::vector<uint64_t> GetGuiModifiers(uint32_t format);
+  bool RecreateSurface(uint32_t format);
 };
 
 } // namespace GBM

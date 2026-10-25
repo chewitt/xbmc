@@ -287,6 +287,37 @@ bool CDRMUtils::FindVideoPlane(uint32_t format, uint64_t modifier)
   return false;
 }
 
+bool CDRMUtils::CanFindVideoPlaneWithLinearGui(uint32_t format,
+                                               uint64_t modifier,
+                                               uint64_t width,
+                                               uint64_t height)
+{
+  if (m_gui_plane == nullptr || m_gui_plane->GetModifier() == DRM_FORMAT_MOD_LINEAR)
+    return false;
+
+  const PlaneType plane_type = HasQuirk(QUIRK_NEEDSPRIMARY) ? PLANE_TYPE_PRIMARY : PLANE_TYPE_ANY;
+  const RESOLUTION_INFO res = GetCurrentMode();
+
+  for (auto& crtc : m_encoder->GetPossibleCrtcs(m_crtcs, m_crtc))
+  {
+    for (auto& gui_plane : m_planes)
+    {
+      if (!gui_plane->Check(res.iWidth, res.iHeight, m_gui_plane->GetFormat(),
+                            DRM_FORMAT_MOD_LINEAR, crtc, plane_type))
+        continue;
+
+      for (auto& video_plane : m_planes)
+      {
+        if (video_plane->GetId() != gui_plane->GetId() &&
+            video_plane->Check(width, height, format, modifier, crtc, PLANE_TYPE_ANY))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 bool CDRMUtils::FindVideoAndGuiPlane(uint32_t format,
                                      uint64_t modifier,
                                      uint64_t width,

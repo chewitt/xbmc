@@ -62,6 +62,9 @@ public:
   void Unregister(IDispResource* resource) override;
 
   bool SetVideoOutput(const VideoPicture* videoPicture) override;
+  // Move the gui to a linear surface, so it no longer needs a plane that
+  // scans out compressed buffers.
+  virtual bool SetLinearGui() { return false; }
 
   void SetColorimetry(const VideoPicture* videoPicture) override;
   KODI::UTILS::Colorimetry GetColorimetry() const override { return m_colorimetry; }

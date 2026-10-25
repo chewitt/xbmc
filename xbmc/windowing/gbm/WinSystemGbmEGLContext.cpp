@@ -119,20 +119,10 @@ bool CWinSystemGbmEGLContext::CreateNewWindow(const std::string& name,
   }
 
   uint32_t format = m_eglContext.GetConfigAttrib(EGL_NATIVE_VISUAL_ID);
-  std::vector<uint64_t> fallbackModifiers = {DRM_FORMAT_MOD_LINEAR};
-  std::vector<uint64_t>* modifiers = &fallbackModifiers;
+  std::vector<uint64_t> modifiers = GetGuiModifiers(format);
 
-  for (auto& fmt : m_DRM->GetOutputFormats())
-  {
-    if (fmt.drm == format && fmt.active)
-    {
-      modifiers = &fmt.modifiers;
-      break;
-    }
-  }
-
-  if (!m_GBM->GetDevice().CreateSurface(res.iWidth, res.iHeight, format, modifiers->data(),
-                                        modifiers->size()))
+  if (!m_GBM->GetDevice().CreateSurface(res.iWidth, res.iHeight, format, modifiers.data(),
+                                        modifiers.size()))
   {
     CLog::Log(LOGERROR, "CWinSystemGbmEGLContext::{} - failed to initialize GBM", __FUNCTION__);
     return false;
@@ -219,76 +209,107 @@ bool CWinSystemGbmEGLContext::SetVideoOutput(const VideoPicture* videoPicture)
 
   if (format != currentFormat)
   {
-    m_eglContext.DestroySurface();
-
-    std::vector<uint64_t> fallbackModifiers = {DRM_FORMAT_MOD_LINEAR};
-    std::vector<uint64_t>* modifiers = &fallbackModifiers;
-
-    for (auto& fmt : m_DRM->GetOutputFormats())
-    {
-      if (fmt.drm == format && fmt.active)
-      {
-        modifiers = &fmt.modifiers;
-        break;
-      }
-    }
-
-    if (!m_GBM->GetDevice().CreateSurface(m_nWidth, m_nHeight, format, modifiers->data(),
-                                          modifiers->size()))
-    {
-      CLog::LogF(LOGERROR, "failed to create GBM surface");
+    if (!RecreateSurface(format))
       return false;
-    }
-
-    if (!m_eglContext.CreatePlatformSurface(
-            m_GBM->GetDevice().GetSurface().Get(),
-            reinterpret_cast<khronos_uintptr_t>(m_GBM->GetDevice().GetSurface().Get())))
-    {
-      return false;
-    }
-
-    if (!m_eglContext.BindContext())
-    {
-      return false;
-    }
-
-    if (!m_eglContext.TrySwapBuffers())
-    {
-      return false;
-    }
 
     CLog::LogF(LOGINFO, "Output surface recreated at {}-bit", bitDepth);
-
-    // amdgpu disables the CRTC when RMFB removes a still-bound FB during
-    // surface destroy (primary-plane invariant). Force a full modeset on
-    // the next commit to re-enable the CRTC. No-op on drivers without the
-    // quirk (Intel, RPi, etc.) so they keep the fast-flip path.
-    if (m_DRM->HasQuirk(KODI::WINDOWING::GBM::QUIRK_NEEDSPRIMARY))
-      m_DRM->SetActive(true);
-
-    // The chained base reads the active plane's cached format and
-    // modifier to decide which DRM plane satisfies the new role.
-    // After a surface rebuild that cache is stale, so refresh it from
-    // the new GBM front buffer (made available by TrySwapBuffers above)
-    // before chaining.
-    if (auto* plane = m_DRM->GetGuiPlane() ? m_DRM->GetGuiPlane() : m_DRM->GetVideoPlane())
-    {
-      if (struct gbm_bo* bo = m_GBM->GetDevice().GetSurface().LockFrontBuffer().Get())
-      {
-        plane->SetFormat(gbm_bo_get_format(bo));
-#if defined(HAS_GBM_MODIFIERS)
-        plane->SetModifier(gbm_bo_get_modifier(bo));
-#else
-        plane->SetModifier(DRM_FORMAT_MOD_LINEAR);
-#endif
-      }
-    }
   }
 
   // Chain to base for the fine-plane part: routes through FindVideoPlane
   // if videoPicture set or FindGuiPlane if videoPicture was nullptr, using
   // the now-current cached format/modifier on the active plane.
   return CWinSystemGbm::SetVideoOutput(videoPicture);
+}
+
+std::vector<uint64_t> CWinSystemGbmEGLContext::GetGuiModifiers(uint32_t format)
+{
+  if (!m_linearGui)
+  {
+    for (auto& fmt : m_DRM->GetOutputFormats())
+    {
+      if (fmt.drm == format && fmt.active)
+        return fmt.modifiers;
+    }
+  }
+
+  return {DRM_FORMAT_MOD_LINEAR};
+}
+
+bool CWinSystemGbmEGLContext::RecreateSurface(uint32_t format)
+{
+  m_eglContext.DestroySurface();
+
+  std::vector<uint64_t> modifiers = GetGuiModifiers(format);
+
+  if (!m_GBM->GetDevice().CreateSurface(m_nWidth, m_nHeight, format, modifiers.data(),
+                                        modifiers.size()))
+  {
+    CLog::LogF(LOGERROR, "failed to create GBM surface");
+    return false;
+  }
+
+  if (!m_eglContext.CreatePlatformSurface(
+          m_GBM->GetDevice().GetSurface().Get(),
+          reinterpret_cast<khronos_uintptr_t>(m_GBM->GetDevice().GetSurface().Get())))
+  {
+    return false;
+  }
+
+  if (!m_eglContext.BindContext())
+  {
+    return false;
+  }
+
+  if (!m_eglContext.TrySwapBuffers())
+  {
+    return false;
+  }
+
+  // amdgpu disables the CRTC when RMFB removes a still-bound FB during
+  // surface destroy (primary-plane invariant). Force a full modeset on
+  // the next commit to re-enable the CRTC. No-op on drivers without the
+  // quirk (Intel, RPi, etc.) so they keep the fast-flip path.
+  if (m_DRM->HasQuirk(KODI::WINDOWING::GBM::QUIRK_NEEDSPRIMARY))
+    m_DRM->SetActive(true);
+
+  // The chained base reads the active plane's cached format and
+  // modifier to decide which DRM plane satisfies the new role.
+  // After a surface rebuild that cache is stale, so refresh it from
+  // the new GBM front buffer (made available by TrySwapBuffers above)
+  // before chaining.
+  if (auto* plane = m_DRM->GetGuiPlane() ? m_DRM->GetGuiPlane() : m_DRM->GetVideoPlane())
+  {
+    if (struct gbm_bo* bo = m_GBM->GetDevice().GetSurface().LockFrontBuffer().Get())
+    {
+      plane->SetFormat(gbm_bo_get_format(bo));
+#if defined(HAS_GBM_MODIFIERS)
+      plane->SetModifier(gbm_bo_get_modifier(bo));
+#else
+      plane->SetModifier(DRM_FORMAT_MOD_LINEAR);
+#endif
+    }
+  }
+
+  return true;
+}
+
+bool CWinSystemGbmEGLContext::SetLinearGui()
+{
+  if (m_linearGui)
+    return false;
+
+  m_linearGui = true;
+
+  const uint32_t format = m_eglContext.GetConfigAttrib(EGL_NATIVE_VISUAL_ID);
+  if (!RecreateSurface(format))
+    return false;
+
+  // the current gui plane may only scan out compressed buffers
+  if (!m_DRM->FindGuiPlane(format, DRM_FORMAT_MOD_LINEAR))
+    return false;
+
+  CLog::LogF(LOGINFO, "Output surface recreated with a linear layout");
+  return true;
 }
 
 bool CWinSystemGbmEGLContext::DestroyWindowSystem()

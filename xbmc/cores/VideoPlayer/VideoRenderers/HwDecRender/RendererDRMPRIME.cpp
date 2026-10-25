@@ -82,7 +82,14 @@ CBaseRenderer* CRendererDRMPRIME::Create(CVideoBuffer* buffer)
       return nullptr;
 
     if (!drm->FindVideoAndGuiPlane(format, modifier, width, height))
-      return nullptr;
+    {
+      // A compressed gui can hold the only plane that scans out the video
+      // format; moving the gui to a linear buffer frees it.
+      if (!drm->CanFindVideoPlaneWithLinearGui(format, modifier, width, height) ||
+          !winSystem->SetLinearGui() ||
+          !drm->FindVideoAndGuiPlane(format, modifier, width, height))
+        return nullptr;
+    }
 
     return new CRendererDRMPRIME();
   }
