@@ -35,6 +35,9 @@ public:
   virtual const VideoPicture& GetPicture() const { return m_picture; }
   virtual uint32_t GetWidth() const { return GetPicture().iWidth; }
   virtual uint32_t GetHeight() const { return GetPicture().iHeight; }
+  // position of the picture within the buffer
+  virtual uint32_t GetCropX() const { return 0; }
+  virtual uint32_t GetCropY() const { return 0; }
 
   virtual AVDRMFrameDescriptor* GetDescriptor() const = 0;
   virtual bool IsValid() const;
@@ -56,6 +59,8 @@ public:
   void Unref();
 
   AVDRMFrameDescriptor* GetDescriptor() const override;
+  uint32_t GetCropX() const override { return static_cast<uint32_t>(m_pFrame->crop_left); }
+  uint32_t GetCropY() const override { return static_cast<uint32_t>(m_pFrame->crop_top); }
   bool IsValid() const override;
   bool AcquireDescriptor() override;
   void ReleaseDescriptor() override;

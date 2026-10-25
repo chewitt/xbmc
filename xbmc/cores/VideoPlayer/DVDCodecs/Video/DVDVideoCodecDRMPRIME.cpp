@@ -529,6 +529,13 @@ bool CDVDVideoCodecDRMPRIME::SetPictureParams(VideoPicture* pVideoPicture)
   pVideoPicture->iWidth = m_pFrame->width;
   pVideoPicture->iHeight = m_pFrame->height;
 
+  // hwaccel frames keep their left/top cropping; the picture starts there
+  if (m_pFrame->format == AV_PIX_FMT_DRM_PRIME)
+  {
+    pVideoPicture->iWidth -= static_cast<int>(m_pFrame->crop_left);
+    pVideoPicture->iHeight -= static_cast<int>(m_pFrame->crop_top);
+  }
+
   double aspect_ratio = 0;
   AVRational pixel_aspect = m_pFrame->sample_aspect_ratio;
   if (pixel_aspect.num)
@@ -1033,8 +1040,15 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::GetPicture(VideoPicture* pVideo
   // ffmpeg's v4l2m2m resizes without re-invoking our GetFormat callback; republish from the frames
   int piWidth, piHeight;
   m_processInfo.GetVideoDimensions(piWidth, piHeight);
-  if (m_pFrame->width != piWidth || m_pFrame->height != piHeight)
-    m_processInfo.SetVideoDimensions(m_pFrame->width, m_pFrame->height);
+  int width = m_pFrame->width;
+  int height = m_pFrame->height;
+  if (m_pFrame->format == AV_PIX_FMT_DRM_PRIME)
+  {
+    width -= static_cast<int>(m_pFrame->crop_left);
+    height -= static_cast<int>(m_pFrame->crop_top);
+  }
+  if (width != piWidth || height != piHeight)
+    m_processInfo.SetVideoDimensions(width, height);
 
   if (!SetPictureParams(pVideoPicture))
     return VC_ERROR;

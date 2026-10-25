@@ -157,9 +157,10 @@ uint32_t CVideoLayerBridgeDRMPRIME::CreateFramebuffer(CVideoBufferDRMPRIME* buff
       flags = DRM_MODE_FB_MODIFIERS;
 
     // add the video frame FB
-    ret = drmModeAddFB2WithModifiers(m_DRM->GetFileDescriptor(), buffer->GetWidth(),
-                                     buffer->GetHeight(), layer->format, handles, pitches, offsets,
-                                     modifier, &fbId, flags);
+    ret = drmModeAddFB2WithModifiers(m_DRM->GetFileDescriptor(),
+                                     buffer->GetCropX() + buffer->GetWidth(),
+                                     buffer->GetCropY() + buffer->GetHeight(), layer->format,
+                                     handles, pitches, offsets, modifier, &fbId, flags);
     if (ret < 0)
       CLog::Log(LOGERROR,
                 "CVideoLayerBridgeDRMPRIME::{} - failed to add fb, format {:#x} modifier {:#x} "
@@ -221,8 +222,8 @@ void CVideoLayerBridgeDRMPRIME::SetVideoPlane(CVideoBufferDRMPRIME* buffer, cons
 
   m_DRM->AddProperty(plane, "FB_ID", m_fb_id);
   m_DRM->AddProperty(plane, "CRTC_ID", m_DRM->GetCrtc()->GetCrtcId());
-  m_DRM->AddProperty(plane, "SRC_X", 0);
-  m_DRM->AddProperty(plane, "SRC_Y", 0);
+  m_DRM->AddProperty(plane, "SRC_X", buffer->GetCropX() << 16);
+  m_DRM->AddProperty(plane, "SRC_Y", buffer->GetCropY() << 16);
   m_DRM->AddProperty(plane, "SRC_W", buffer->GetWidth() << 16);
   m_DRM->AddProperty(plane, "SRC_H", buffer->GetHeight() << 16);
   m_DRM->AddProperty(plane, "CRTC_X", static_cast<int32_t>(destRect.x1) & ~1);
