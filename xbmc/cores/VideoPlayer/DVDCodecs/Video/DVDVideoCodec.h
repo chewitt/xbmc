@@ -252,8 +252,10 @@ public:
   /**
    * Re-open the decoder.
    * Decoder request to re-open
+   * Returns false if the decoder cannot decode the stream, so a software decoder
+   * is opened instead
    */
-  virtual void Reopen() {}
+  virtual bool Reopen() { return true; }
 
 protected:
   CProcessInfo &m_processInfo;

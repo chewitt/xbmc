@@ -232,6 +232,8 @@ enum AVPixelFormat CDVDVideoCodecDRMPRIME::GetFormat(struct AVCodecContext* avct
   CLog::Log(LOGERROR, "CDVDVideoCodecDRMPRIME::{} - no supported pixel formats: {}", __FUNCTION__,
             StringUtils::Join(formats, ", "));
 
+  static_cast<CDVDVideoCodecDRMPRIME*>(avctx->opaque)->m_noSupportedFormat = true;
+
   return AV_PIX_FMT_NONE;
 }
 
@@ -453,6 +455,10 @@ bool CDVDVideoCodecDRMPRIME::AddData(const DemuxPacket& packet)
   // and storing our own AVPacket. This will require some extensive changes.
   av_buffer_unref(&avpkt->buf);
   av_free(avpkt);
+
+  // consume the packet so GetPicture() can request a software decoder
+  if (m_noSupportedFormat)
+    return true;
 
   if (ret == AVERROR(EAGAIN))
     return false;
@@ -949,6 +955,9 @@ std::string CDVDVideoCodecDRMPRIME::GetFilterChain(bool interlaced)
 
 CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::GetPicture(VideoPicture* pVideoPicture)
 {
+  if (m_noSupportedFormat)
+    return VC_REOPEN;
+
   if (m_codecControlFlags & DVD_CODEC_CTRL_DRAIN)
     Drain();
 

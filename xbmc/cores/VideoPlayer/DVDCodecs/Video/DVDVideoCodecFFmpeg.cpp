@@ -995,13 +995,14 @@ void CDVDVideoCodecFFmpeg::Reset()
   m_dropCtrl.Reset(false);
 }
 
-void CDVDVideoCodecFFmpeg::Reopen()
+bool CDVDVideoCodecFFmpeg::Reopen()
 {
   Dispose();
   if (!Open(m_hints, m_options))
   {
     Dispose();
   }
+  return true;
 }
 
 CDVDVideoCodec::VCReturn CDVDVideoCodecFFmpeg::HandleHwFatal()

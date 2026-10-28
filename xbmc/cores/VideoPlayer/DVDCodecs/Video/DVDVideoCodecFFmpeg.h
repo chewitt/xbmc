@@ -37,7 +37,7 @@ public:
   bool Open(CDVDStreamInfo &hints, CDVDCodecOptions &options) override;
   bool AddData(const DemuxPacket &packet) override;
   void Reset() override;
-  void Reopen() override;
+  bool Reopen() override;
   CDVDVideoCodec::VCReturn GetPicture(VideoPicture* pVideoPicture) override;
   const char* GetName() override { return m_name.c_str(); }; // m_name is never changed after open
   unsigned GetConvergeCount() override;

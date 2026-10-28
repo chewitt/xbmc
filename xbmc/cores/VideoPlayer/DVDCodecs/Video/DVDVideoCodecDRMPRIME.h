@@ -12,6 +12,7 @@
 #include "cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodec.h"
 #include "cores/VideoPlayer/DVDStreamInfo.h"
 
+#include <atomic>
 #include <memory>
 
 extern "C"
@@ -38,6 +39,7 @@ public:
   const char* GetName() override { return m_name.c_str(); }
   unsigned GetAllowedReferences() override { return 5; }
   void SetCodecControl(int flags) override;
+  bool Reopen() override { return false; }
 
 protected:
   void Drain();
@@ -59,6 +61,7 @@ protected:
   CDVDStreamInfo m_hints;
   double m_DAR = 1.0;
   bool m_checkedDeinterlace = false;
+  std::atomic<bool> m_noSupportedFormat{false};
   AVCodecContext* m_pCodecContext = nullptr;
   AVFrame* m_pFrame = nullptr;
   AVFrame* m_pFilterFrame = nullptr;

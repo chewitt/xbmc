@@ -688,7 +688,15 @@ bool CVideoPlayerVideo::ProcessDecoderOutput(double &frametime, double &pts)
       SendMessage(msg, 10);
     }
 
-    m_pVideoCodec->Reopen();
+    if (!m_pVideoCodec->Reopen())
+    {
+      CLog::Log(LOGINFO, "CVideoPlayerVideo - {} cannot decode the stream, using software",
+                m_pVideoCodec->GetName());
+      CDVDStreamInfo hint(m_hints);
+      hint.codecOptions |= CODEC_FORCE_SOFTWARE;
+      m_pVideoCodec.reset();
+      OpenStream(hint, nullptr);
+    }
     m_packets.clear();
     m_renderManager.DiscardBuffer();
     return false;
